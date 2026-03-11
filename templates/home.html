@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+{% for post in post_list %}
+<div class="post-entry">
+    <h2><a href="{{ post.get_absolute_url }}">{{ post.title }}</a></h2>
+    <p>Authored by: {{ post.author }} &mdash; {{ post.created_at|date:"F j, Y" }}</p>
+    <p>{{ post.body|truncatewords:30 }}</p>
+    <a href="{{ post.get_absolute_url }}">Read more &rarr;</a>
+</div>
+{% endfor %}
+{% endblock content %}

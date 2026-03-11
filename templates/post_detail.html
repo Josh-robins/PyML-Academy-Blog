@@ -1,8 +1,17 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="post-entry">
-    <h2>{{ post.title }}</h2>
-    <p>Authored by: {{ post.author }} &mdash; {{ post.created_at|date:"F j, Y" }}</p>
+    <h2>
+        {{ post.title }}
+        {% if post.updated_at != post.created_at %}
+            <span class="edited-badge">edited</span>
+        {% endif %}
+    </h2>
+    <p class="post-meta">By {{ post.author }} &mdash; {{ post.created_at|date:"F j, Y" }}</p>
     <p>{{ post.body }}</p>
+    <div class="post-actions">
+        <a href="{% url 'post-edit' post.pk %}" class="btn btn-edit">&#9998; Edit</a>
+        <a href="{% url 'post-delete' post.pk %}" class="btn btn-delete">&#128465; Delete</a>
+    </div>
 </div>
 {% endblock content %}

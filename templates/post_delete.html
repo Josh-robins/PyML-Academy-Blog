@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="delete-confirm">
+    <h2>Delete Post</h2>
+    <p>Are you sure you want to delete <strong>"{{ post.title }}"</strong>? This cannot be undone.</p>
+    <form action="" method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-delete">Yes, delete it</button>
+        <a href="{{ post.get_absolute_url }}" class="btn btn-cancel">Cancel</a>
+    </form>
+</div>
+{% endblock content %}

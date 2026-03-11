@@ -13,10 +13,24 @@
 
 <body>
     <header>
-        <h1><a href="{% url 'home' %}">PyML Academy Blog</a></h1>
+        <div class="nav_right">
+            <h1><a href="{% url 'home' %}">PyML Academy Blog</a></h1>
+        </div>
+        <div class="nav-left">
+            {% if user.is_authenticated %}
+            <a href="{% url 'post-new' %}">+ New Post</a>
+            <form method="post" action="{% url 'logout' %}" style="margin:0;">
+                {% csrf_token %}
+                <button type="submit">Log out</button>
+            </form>
+            {% else %}
+            <a href="{% url 'login' %}">Log in</a>
+            <a href="{% url 'signup' %}">Sign up</a>
+            {% endif %}
+        </div>
 
     </header>
-    <div>
+    <div class="container">
         {% block content %}
         {% endblock %}
     </div>

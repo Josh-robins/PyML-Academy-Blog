@@ -19,5 +19,9 @@ from django.urls import include, path
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('blog.urls')),
+    path('accounts/', include('django.contrib.auth.urls')),# for user authentication
+    path('accounts/', include('accounts.urls')), # for user registration
+    path('', include('blog.urls')), # Include the blog app's URLs
 ]
+
+handler404 = 'django_project.views.custom_404'

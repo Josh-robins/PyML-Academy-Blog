@@ -1,5 +1,13 @@
 {% extends "base.html" %}
 {% block content %}
+{% if user.is_authenticated %}
+<p id="greeting"></p>
+<script>
+    const hour = new Date().getHours();
+    const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+    document.getElementById('greeting').textContent = greeting + ', {{ user.username }}!';
+</script>
+{% endif %}
 {% for post in post_list %}
 <div class="post-entry">
     <h2><a href="{{ post.get_absolute_url }}">{{ post.title }}</a></h2>

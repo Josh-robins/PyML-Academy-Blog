@@ -3,7 +3,7 @@ from django.test import TestCase
 from django.urls import reverse, resolve
 
 from .models import Post
-from .views import BlogView, PostDetailView
+from .views import BlogView, PostDetailView, PostUpdateView, PostDeleteView
 
 
 class PostModelTest(TestCase):
@@ -139,4 +139,142 @@ class PostDetailURLTest(TestCase):
     def test_detail_404_for_nonexistent_post(self):
         """Requesting a non-existent post pk returns HTTP 404."""
         response = self.client.get(reverse('post-detail', kwargs={'pk': 99999}))
+        self.assertEqual(response.status_code, 404)
+
+
+class PostUpdateViewTest(TestCase):
+    """Tests for the post edit/update view."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = get_user_model().objects.create_user(
+            username='edituser',
+            password='secret123',
+        )
+        cls.post = Post.objects.create(
+            title='Original Title',
+            author=cls.user,
+            body='Original body content.',
+        )
+
+    def test_edit_url_exists(self):
+        """GET /post/<pk>/edit/ returns HTTP 200."""
+        response = self.client.get(f'/post/{self.post.pk}/edit/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_edit_url_by_name(self):
+        """Reverse of 'post-edit' URL name returns HTTP 200."""
+        response = self.client.get(reverse('post-edit', kwargs={'pk': self.post.pk}))
+        self.assertEqual(response.status_code, 200)
+
+    def test_edit_url_resolves_to_correct_view(self):
+        """/post/<pk>/edit/ resolves to PostUpdateView."""
+        view = resolve(f'/post/{self.post.pk}/edit/')
+        self.assertEqual(view.func.view_class, PostUpdateView)
+
+    def test_edit_uses_correct_template(self):
+        """Edit page uses post_edit.html template."""
+        response = self.client.get(reverse('post-edit', kwargs={'pk': self.post.pk}))
+        self.assertTemplateUsed(response, 'post_edit.html')
+
+    def test_edit_form_prepopulated(self):
+        """Edit page pre-fills the form with the existing title and body."""
+        response = self.client.get(reverse('post-edit', kwargs={'pk': self.post.pk}))
+        self.assertContains(response, 'Original Title')
+        self.assertContains(response, 'Original body content.')
+
+    def test_post_update_changes_title_and_body(self):
+        """POSTing valid data updates the post and redirects to the detail page."""
+        response = self.client.post(
+            reverse('post-edit', kwargs={'pk': self.post.pk}),
+            data={'title': 'Updated Title', 'body': 'Updated body content.'},
+        )
+        self.post.refresh_from_db()
+        self.assertEqual(self.post.title, 'Updated Title')
+        self.assertEqual(self.post.body, 'Updated body content.')
+        self.assertRedirects(response, reverse('post-detail', kwargs={'pk': self.post.pk}))
+
+    def test_edit_404_for_nonexistent_post(self):
+        """Requesting edit for a non-existent pk returns HTTP 404."""
+        response = self.client.get(reverse('post-edit', kwargs={'pk': 99999}))
+        self.assertEqual(response.status_code, 404)
+
+
+class PostDeleteViewTest(TestCase):
+    """Tests for the post delete view."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = get_user_model().objects.create_user(
+            username='deleteuser',
+            password='secret123',
+        )
+
+    def setUp(self):
+        # Recreate the post before each test so deletion tests are independent.
+        self.post = Post.objects.create(
+            title='Post To Delete',
+            author=self.user,
+            body='This post will be deleted.',
+        )
+
+    def test_delete_url_exists(self):
+        """GET /post/<pk>/delete/ returns HTTP 200 (confirmation page)."""
+        response = self.client.get(f'/post/{self.post.pk}/delete/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_delete_url_by_name(self):
+        """Reverse of 'post-delete' URL name returns HTTP 200."""
+        response = self.client.get(reverse('post-delete', kwargs={'pk': self.post.pk}))
+        self.assertEqual(response.status_code, 200)
+
+    def test_delete_url_resolves_to_correct_view(self):
+        """/post/<pk>/delete/ resolves to PostDeleteView."""
+        view = resolve(f'/post/{self.post.pk}/delete/')
+        self.assertEqual(view.func.view_class, PostDeleteView)
+
+    def test_delete_uses_correct_template(self):
+        """Delete confirmation page uses post_delete.html template."""
+        response = self.client.get(reverse('post-delete', kwargs={'pk': self.post.pk}))
+        self.assertTemplateUsed(response, 'post_delete.html')
+
+    def test_delete_confirmation_page_shows_post_title(self):
+        """Delete confirmation page displays the post title."""
+        response = self.client.get(reverse('post-delete', kwargs={'pk': self.post.pk}))
+        self.assertContains(response, 'Post To Delete')
+
+    def test_post_delete_removes_post_and_redirects_home(self):
+        """POSTing to the delete URL removes the post and redirects to home."""
+        pk = self.post.pk
+        response = self.client.post(reverse('post-delete', kwargs={'pk': pk}))
+        self.assertFalse(Post.objects.filter(pk=pk).exists())
+        self.assertRedirects(response, reverse('home'))
+
+    def test_delete_404_for_nonexistent_post(self):
+        """Requesting delete for a non-existent pk returns HTTP 404."""
+        response = self.client.get(reverse('post-delete', kwargs={'pk': 99999}))
+        self.assertEqual(response.status_code, 404)
+
+
+class Custom404PageTest(TestCase):
+    """Tests that a 404 response is returned for unknown URLs."""
+
+    def test_unknown_url_returns_404(self):
+        """A request to a URL that doesn't exist returns HTTP 404."""
+        response = self.client.get('/this-url-does-not-exist/')
+        self.assertEqual(response.status_code, 404)
+
+    def test_nonexistent_post_detail_returns_404(self):
+        """Detail page for a missing pk returns HTTP 404."""
+        response = self.client.get(reverse('post-detail', kwargs={'pk': 99999}))
+        self.assertEqual(response.status_code, 404)
+
+    def test_nonexistent_post_edit_returns_404(self):
+        """Edit page for a missing pk returns HTTP 404."""
+        response = self.client.get(reverse('post-edit', kwargs={'pk': 99999}))
+        self.assertEqual(response.status_code, 404)
+
+    def test_nonexistent_post_delete_returns_404(self):
+        """Delete page for a missing pk returns HTTP 404."""
+        response = self.client.get(reverse('post-delete', kwargs={'pk': 99999}))
         self.assertEqual(response.status_code, 404)

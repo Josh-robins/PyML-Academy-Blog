@@ -278,3 +278,131 @@ class Custom404PageTest(TestCase):
         """Delete page for a missing pk returns HTTP 404."""
         response = self.client.get(reverse('post-delete', kwargs={'pk': 99999}))
         self.assertEqual(response.status_code, 404)
+
+
+class LoginViewTest(TestCase):
+    """Tests for the login page."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = get_user_model().objects.create_user(
+            username='loginuser',
+            password='secret123',
+        )
+
+    def test_login_url_exists(self):
+        """GET /accounts/login/ returns HTTP 200."""
+        response = self.client.get('/accounts/login/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_login_url_by_name(self):
+        """Reverse of 'login' URL name returns HTTP 200."""
+        response = self.client.get(reverse('login'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_login_uses_correct_template(self):
+        """Login page uses registration/login.html template."""
+        response = self.client.get(reverse('login'))
+        self.assertTemplateUsed(response, 'registration/login.html')
+
+    def test_login_page_has_signup_link(self):
+        """Login page contains a link to the sign-up page."""
+        response = self.client.get(reverse('login'))
+        self.assertContains(response, reverse('signup'))
+
+    def test_valid_login_redirects_to_home(self):
+        """POSTing valid credentials logs the user in and redirects to home."""
+        response = self.client.post(reverse('login'), data={
+            'username': 'loginuser',
+            'password': 'secret123',
+        })
+        self.assertRedirects(response, reverse('home'))
+
+    def test_invalid_login_stays_on_login_page(self):
+        """POSTing wrong credentials returns 200 and stays on login page."""
+        response = self.client.post(reverse('login'), data={
+            'username': 'loginuser',
+            'password': 'wrongpassword',
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'registration/login.html')
+
+    def test_logged_in_user_sees_greeting(self):
+        """After login, homepage contains the username greeting."""
+        self.client.login(username='loginuser', password='secret123')
+        response = self.client.get(reverse('home'))
+        self.assertContains(response, 'loginuser')
+
+
+class LogoutViewTest(TestCase):
+    """Tests for logout behaviour."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = get_user_model().objects.create_user(
+            username='logoutuser',
+            password='secret123',
+        )
+
+    def test_logout_post_redirects_to_home(self):
+        """POSTing to logout logs the user out and redirects to home."""
+        self.client.login(username='logoutuser', password='secret123')
+        response = self.client.post(reverse('logout'))
+        self.assertRedirects(response, reverse('home'))
+
+    def test_logout_get_returns_405(self):
+        """GET request to logout returns 405 Method Not Allowed."""
+        self.client.login(username='logoutuser', password='secret123')
+        response = self.client.get(reverse('logout'))
+        self.assertEqual(response.status_code, 405)
+
+    def test_user_is_logged_out_after_logout(self):
+        """After POSTing to logout, the user is no longer authenticated."""
+        self.client.login(username='logoutuser', password='secret123')
+        self.client.post(reverse('logout'))
+        response = self.client.get(reverse('home'))
+        self.assertFalse(response.wsgi_request.user.is_authenticated)
+
+
+class SignUpViewTest(TestCase):
+    """Tests for the sign-up page."""
+
+    def test_signup_url_exists(self):
+        """GET /accounts/signup/ returns HTTP 200."""
+        response = self.client.get('/accounts/signup/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_signup_url_by_name(self):
+        """Reverse of 'signup' URL name returns HTTP 200."""
+        response = self.client.get(reverse('signup'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_signup_uses_correct_template(self):
+        """Sign-up page uses registration/signup.html template."""
+        response = self.client.get(reverse('signup'))
+        self.assertTemplateUsed(response, 'registration/signup.html')
+
+    def test_signup_page_has_login_link(self):
+        """Sign-up page contains a link to the login page."""
+        response = self.client.get(reverse('signup'))
+        self.assertContains(response, reverse('login'))
+
+    def test_valid_signup_creates_user_and_redirects(self):
+        """POSTing valid signup data creates a new user and redirects to login."""
+        response = self.client.post(reverse('signup'), data={
+            'username': 'brandnewuser',
+            'password1': 'C0mpl3xPass!',
+            'password2': 'C0mpl3xPass!',
+        })
+        self.assertRedirects(response, reverse('login'))
+        self.assertTrue(get_user_model().objects.filter(username='brandnewuser').exists())
+
+    def test_invalid_signup_stays_on_signup_page(self):
+        """POSTing mismatched passwords returns 200 and stays on sign-up page."""
+        response = self.client.post(reverse('signup'), data={
+            'username': 'baduser',
+            'password1': 'C0mpl3xPass!',
+            'password2': 'DifferentPass!',
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'registration/signup.html')

@@ -1,4 +1,4 @@
-# Django Blog
+# PyML Academy Blog
 
 A full-featured blog application built with Django 6. Authenticated users can create, edit, and delete posts. Visitors can sign up or log in to participate. Static files are served in both development and production via WhiteNoise.
 
@@ -222,7 +222,7 @@ All new features must include tests in `blog/tests.py`. Run the full suite befor
 python manage.py test blog --verbosity=2
 ```
 
-All 36 existing tests must still pass.
+All 52 existing tests must still pass.
 
 ### 5. Commit your changes
 
